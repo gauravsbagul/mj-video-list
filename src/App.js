@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  Button,
-  Image,
   StyleSheet,
   Text,
   View,
@@ -9,6 +7,7 @@ import {
   FlatList,
   RefreshControl
 } from "react-native";
+import axios from "axios";
 
 import VideoCard from "./components/VideoCard";
 
@@ -17,19 +16,25 @@ const App = (props) => {
   const [videoList, setVideoList] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [limit, setLimit] = useState(10);
+  const [isError, serIsError] = useState(null);
 
   useEffect(() => {
-    getVideosFromAPI(limit);
+    getVideosFromAPI(10);
     return () => {};
   }, []);
 
   const getVideosFromAPI = async (limit) => {
-    const res = await fetch(
-      `https://itunes.apple.com/search?term=Michael+jackson&limit=${limit}`
-    );
-    const response = await res.json();
-    setLimit(response?.resultCount + 10);
-    setVideoList(response?.results);
+    try {
+      const response = await axios(
+        `https://itunes.apple.com/search?term=Michael+jackson&limit=${limit}`
+      );
+      // const response = await res.json();
+      setLimit(response?.resultCount + 10);
+      setVideoList(response?.results);
+      serIsError(null);
+    } catch (error) {
+      serIsError(error);
+    }
   };
 
   const onRefresh = () => {
@@ -38,24 +43,29 @@ const App = (props) => {
     getVideosFromAPI(limit);
     setRefreshing(false);
   };
+  console.log("isError", isError);
   return (
     <View style={styles.app}>
-      <FlatList
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => onRefresh()}
-          />
-        }
-        data={[...videoList]}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item, index }) => (
-          <VideoCard item={item} index={index} navigation={navigation} />
-        )}
-        ListFooterComponent={<View style={{ height: 150 }} />}
-        onEndReached={() => getVideosFromAPI(limit)}
-        ListEmptyComponent={<ActivityIndicator />}
-      />
+      {isError ? (
+        <Text>Something Went wrong </Text>
+      ) : (
+        <FlatList
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => onRefresh()}
+            />
+          }
+          data={[...videoList]}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item, index }) => (
+            <VideoCard item={item} index={index} navigation={navigation} />
+          )}
+          ListFooterComponent={<View style={{ height: 150 }} />}
+          onEndReached={() => getVideosFromAPI(limit)}
+          ListEmptyComponent={<ActivityIndicator />}
+        />
+      )}
     </View>
   );
 };
